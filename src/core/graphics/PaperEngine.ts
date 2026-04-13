@@ -163,7 +163,7 @@ export class PaperEngine {
 
     tool.onMouseDown = (e: paper.ToolEvent) => {
       // Only left button drives drawing / dot selection
-      if ((e.event as MouseEvent).button !== 0) return;
+      // if ((e.event as MouseEvent).button !== 0) return;
 
       if (this.isDrawing) {
         this.addDrawingPoint(e.point);
