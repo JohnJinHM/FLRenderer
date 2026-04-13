@@ -20,6 +20,14 @@ interface ProjectState {
   setAppMode: (mode: AppMode) => void;
   setDrawingTrackId: (id: string | null) => void;
   setExportProgress: (progress: ExportProgress | null) => void;
+
+  /** Replace the entire project state from a loaded save file. */
+  restoreState: (saved: {
+    resolution: { w: number; h: number };
+    duration: number;
+    fps: number;
+    mapImageUrl: string | null;
+  }) => void;
 }
 
 export const useProjectStore = create<ProjectState>()(
@@ -54,5 +62,21 @@ export const useProjectStore = create<ProjectState>()(
     setAppMode: (appMode) => set({ appMode }),
     setDrawingTrackId: (drawingTrackId) => set({ drawingTrackId }),
     setExportProgress: (exportProgress) => set({ exportProgress }),
+
+    restoreState: (saved) => {
+      // Revoke the previous Object URL before replacing it
+      const prev = get().mapImageUrl;
+      if (prev) URL.revokeObjectURL(prev);
+      set({
+        resolution:    saved.resolution,
+        duration:      saved.duration,
+        fps:           saved.fps,
+        mapImageUrl:   saved.mapImageUrl,
+        currentTime:   0,
+        appMode:       'idle',
+        drawingTrackId: null,
+        exportProgress: null,
+      });
+    },
   })),
 );

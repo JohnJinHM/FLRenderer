@@ -1,11 +1,45 @@
+import { useRef, useState } from 'react';
 import { useTrackStore } from '../../store/useTrackStore';
 import { useProjectStore } from '../../store/useProjectStore';
 import { getEngine } from '../../core/instances';
 import { MapUploader } from '../MapUploader';
+import { saveProject, loadProject } from '../../core/projectIO';
 import type { Interpolation } from '../../types';
 import './PropertiesPanel.css';
 
 export function PropertiesPanel() {
+  const loadInputRef = useRef<HTMLInputElement>(null);
+  const [ioState, setIoState] = useState<'idle' | 'saving' | 'loading'>('idle');
+  const [ioError, setIoError] = useState<string | null>(null);
+
+  async function handleSave() {
+    setIoState('saving');
+    setIoError(null);
+    try {
+      await saveProject();
+    } catch (e) {
+      setIoError(e instanceof Error ? e.message : 'Save failed.');
+    } finally {
+      setIoState('idle');
+    }
+  }
+
+  async function handleLoadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset so the same file can be re-selected later
+    e.target.value = '';
+    setIoState('loading');
+    setIoError(null);
+    try {
+      await loadProject(file);
+    } catch (err) {
+      setIoError(err instanceof Error ? err.message : 'Load failed.');
+    } finally {
+      setIoState('idle');
+    }
+  }
+
   const tracks = useTrackStore(s => s.tracks);
   const activeTrackId = useTrackStore(s => s.activeTrackId);
   const { addTrack, removeTrack, setActiveTrack, updateKeyframe, updateTrackColor } =
@@ -72,6 +106,37 @@ export function PropertiesPanel() {
 
   return (
     <aside className="properties-panel">
+      {/* ── Project I/O ── */}
+      <section className="properties-panel__section">
+        <div className="properties-panel__section-title">Project</div>
+        <div className="properties-panel__actions">
+          <button
+            className="properties-panel__btn properties-panel__btn--primary"
+            onClick={handleSave}
+            disabled={ioState !== 'idle'}
+          >
+            {ioState === 'saving' ? 'Saving…' : 'Save Project'}
+          </button>
+          <button
+            className="properties-panel__btn"
+            onClick={() => loadInputRef.current?.click()}
+            disabled={ioState !== 'idle'}
+          >
+            {ioState === 'loading' ? 'Loading…' : 'Load Project'}
+          </button>
+          <input
+            ref={loadInputRef}
+            type="file"
+            accept=".json"
+            style={{ display: 'none' }}
+            onChange={handleLoadFile}
+          />
+        </div>
+        {ioError && (
+          <div className="properties-panel__io-error">{ioError}</div>
+        )}
+      </section>
+
       <section className="properties-panel__section">
         <MapUploader />
       </section>

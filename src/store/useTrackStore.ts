@@ -33,6 +33,9 @@ interface TrackState {
   updateTrackColor: (trackId: string, color: string) => void;
   updateTrackName: (trackId: string, name: string) => void;
   toggleRecording: (trackId: string) => void;
+
+  /** Replace all tracks from a loaded save file (preserves existing IDs/data). */
+  loadAll: (tracks: Track[]) => void;
 }
 
 export const useTrackStore = create<TrackState>()(
@@ -139,5 +142,11 @@ export const useTrackStore = create<TrackState>()(
           ? state.recordingTrackIds.filter(id => id !== trackId)
           : [...state.recordingTrackIds, trackId],
       })),
+
+    loadAll: (tracks) => {
+      // Resume color cycling after the loaded tracks so new additions don't clash
+      colorIndex = tracks.length;
+      set({ tracks, activeTrackId: null, recordingTrackIds: [] });
+    },
   })),
 );

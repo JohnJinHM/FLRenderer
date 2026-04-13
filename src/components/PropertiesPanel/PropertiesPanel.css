@@ -177,6 +177,19 @@
   border-color: var(--color-accent);
 }
 
+/* ─── I/O error ──────────────────────────────────────────── */
+.properties-panel__io-error {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.35);
+  border-radius: 4px;
+  color: #e74c3c;
+  font-size: 11px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
 /* ─── Drawing indicator ──────────────────────────────────── */
 .properties-panel__drawing-indicator {
   margin: 10px 14px;
