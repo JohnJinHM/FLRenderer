@@ -1,0 +1,190 @@
+.properties-panel {
+  width: 220px;
+  min-width: 220px;
+  background: var(--color-surface-1);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.properties-panel__section {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.properties-panel__section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+
+/* ─── Track list ─────────────────────────────────────────── */
+.properties-panel__track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.properties-panel__track-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: var(--color-surface-2);
+  border: 1px solid transparent;
+  transition: border-color 0.12s;
+  font-size: 12px;
+}
+
+.properties-panel__track-item:hover {
+  border-color: var(--color-border);
+}
+
+.properties-panel__track-item.active {
+  border-color: var(--color-accent);
+  background: rgba(74, 124, 89, 0.12);
+}
+
+.properties-panel__track-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.properties-panel__track-name {
+  flex: 1;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.properties-panel__track-remove {
+  padding: 0 4px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.5;
+  transition: opacity 0.12s;
+}
+
+.properties-panel__track-remove:hover {
+  opacity: 1;
+  color: #e74c3c;
+}
+
+/* ─── Action buttons ─────────────────────────────────────── */
+.properties-panel__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.properties-panel__btn {
+  padding: 7px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+}
+
+.properties-panel__btn:hover:not(:disabled) {
+  background: var(--color-surface-3);
+}
+
+.properties-panel__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.properties-panel__btn--primary {
+  background: var(--color-accent);
+  border-color: transparent;
+  color: #fff;
+}
+
+.properties-panel__btn--primary:hover:not(:disabled) {
+  background: #5a8f69;
+}
+
+/* ─── Style fields ───────────────────────────────────────── */
+.properties-panel__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--color-text);
+}
+
+.properties-panel__field span:first-child {
+  width: 80px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.properties-panel__field input[type='range'] {
+  flex: 1;
+  accent-color: var(--color-accent);
+}
+
+.properties-panel__field input[type='color'] {
+  width: 36px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  cursor: pointer;
+  background: none;
+}
+
+.properties-panel__field-value {
+  width: 36px;
+  text-align: right;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.properties-panel__select {
+  flex: 1;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  color: var(--color-text);
+  font-size: 12px;
+  padding: 3px 6px;
+  cursor: pointer;
+  outline: none;
+}
+
+.properties-panel__select:focus {
+  border-color: var(--color-accent);
+}
+
+/* ─── Drawing indicator ──────────────────────────────────── */
+.properties-panel__drawing-indicator {
+  margin: 10px 14px;
+  padding: 8px 12px;
+  background: rgba(255, 220, 80, 0.08);
+  border: 1px solid rgba(255, 220, 80, 0.3);
+  border-radius: 4px;
+  color: rgba(255, 220, 80, 0.9);
+  font-size: 11px;
+  text-align: center;
+}

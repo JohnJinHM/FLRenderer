@@ -1,0 +1,56 @@
+.canvas-view {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111318;
+  overflow: hidden;
+}
+
+.canvas-view__canvas {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.canvas-view__reset-view {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(30, 33, 42, 0.85);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.15s, color 0.15s;
+}
+
+.canvas-view__reset-view:hover {
+  background: rgba(60, 65, 80, 0.9);
+  color: #fff;
+}
+
+.canvas-view__hint {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: rgba(255, 220, 80, 0.95);
+  font-size: 12px;
+  font-family: monospace;
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 220, 80, 0.3);
+  pointer-events: none;
+  white-space: nowrap;
+}

@@ -1,0 +1,403 @@
+.timeline {
+  display: flex;
+  flex-direction: column;
+  height: 180px;
+  min-height: 180px;
+  background: var(--color-surface-1);
+  border-top: 1px solid var(--color-border);
+  user-select: none;
+}
+
+/* ─── Transport bar ──────────────────────────────────────── */
+.timeline__transport {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--color-border);
+  height: 38px;
+  flex-shrink: 0;
+}
+
+.timeline__btn {
+  width: 30px;
+  height: 26px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+}
+
+.timeline__btn:hover:not(:disabled) {
+  background: var(--color-surface-3);
+}
+
+.timeline__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.timeline__btn--active {
+  background: var(--color-accent);
+  border-color: transparent;
+  color: #fff;
+}
+
+.timeline__time {
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--color-text);
+  min-width: 56px;
+  margin-left: 6px;
+}
+
+.timeline__separator {
+  color: var(--color-text-muted);
+}
+
+.timeline__duration-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.timeline__duration-input {
+  width: 50px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  color: var(--color-text);
+  padding: 3px 6px;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+/* ─── Zoom controls ──────────────────────────────────────── */
+.timeline__zoom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.timeline__zoom-label {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  min-width: 34px;
+  text-align: center;
+}
+
+.timeline__zoom-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+  padding: 0;
+}
+
+.timeline__zoom-btn:hover:not(:disabled) {
+  background: var(--color-surface-3);
+}
+
+.timeline__zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ─── Body ───────────────────────────────────────────────── */
+.timeline__body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ─── Track labels column ────────────────────────────────── */
+.timeline__labels {
+  width: 130px;
+  min-width: 130px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/*
+ * Spacer that matches the ruler row height so track labels line up
+ * exactly with their corresponding track rows in the rail area.
+ */
+.timeline__ruler-spacer {
+  height: 20px;
+  min-height: 20px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+
+.timeline__track-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 6px 0 10px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.1s;
+  overflow: hidden;
+}
+
+.timeline__track-label:hover {
+  background: var(--color-surface-2);
+}
+
+.timeline__track-label.active {
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.timeline__track-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.timeline__track-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline__empty {
+  padding: 10px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ─── Record toggle ──────────────────────────────────────── */
+.timeline__record-btn {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 7px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.timeline__record-btn:hover {
+  border-color: rgba(231, 76, 60, 0.6);
+  color: rgba(231, 76, 60, 0.7);
+}
+
+.timeline__record-btn.active {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.18);
+  color: #e74c3c;
+}
+
+/* ─── Rail area ──────────────────────────────────────────── */
+.timeline__rail-area {
+  flex: 1;
+  position: relative;
+  cursor: crosshair;
+  overflow: hidden;
+}
+
+/* ─── Ruler ──────────────────────────────────────────────── */
+.timeline__ruler {
+  position: relative;
+  height: 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  overflow: hidden;
+}
+
+.timeline__ruler-tick {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.timeline__ruler-tick::before {
+  content: '';
+  display: block;
+  width: 1px;
+  height: 8px;
+  background: var(--color-border);
+}
+
+.timeline__ruler-label {
+  font-size: 9px;
+  color: var(--color-text-muted);
+  margin-left: 2px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ─── Track rows ─────────────────────────────────────────── */
+.timeline__track-row {
+  position: relative;
+  height: 32px;
+  border-bottom: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+/* ─── Keyframe wrapper + diamond + delete ────────────────── */
+.timeline__kf-wrap {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  cursor: grab;
+}
+
+.timeline__kf-wrap:active {
+  cursor: grabbing;
+}
+
+.timeline__keyframe {
+  width: 10px;
+  height: 10px;
+  border-radius: 1px;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  transform: rotate(45deg);
+  transition: transform 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.timeline__kf-wrap:hover .timeline__keyframe {
+  transform: rotate(45deg) scale(1.3);
+  border-color: #fff;
+}
+
+.timeline__keyframe.dragging {
+  transform: rotate(45deg) scale(1.25);
+  border-color: #fff;
+}
+
+.timeline__kf-delete {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(160, 28, 28, 0.92);
+  color: #fff;
+  font-size: 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+
+.timeline__kf-wrap:hover .timeline__kf-delete {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.timeline__kf-delete:hover {
+  background: #e74c3c;
+}
+
+/* ─── Playhead ───────────────────────────────────────────── */
+.timeline__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e74c3c;
+  pointer-events: none;
+  z-index: 10;
+  transform: translateX(-50%);
+}
+
+.timeline__playhead::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid #e74c3c;
+}
+
+/* ─── Position scrollbar ─────────────────────────────────── */
+.timeline__scrollbar {
+  height: 8px;
+  min-height: 8px;
+  flex-shrink: 0;
+  background: var(--color-surface-2);
+  border-top: 1px solid var(--color-border);
+  position: relative;
+  cursor: pointer;
+}
+
+.timeline__scrollbar-thumb {
+  position: absolute;
+  top: 1px;
+  height: 6px;
+  min-width: 24px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+  cursor: grab;
+  transition: background 0.1s;
+}
+
+.timeline__scrollbar-thumb:hover,
+.timeline__scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.35);
+  cursor: grabbing;
+}
