@@ -1,33 +1,24 @@
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { CanvasView } from './components/CanvasView';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { Timeline } from './components/Timeline';
 import { useProjectStore } from './store/useProjectStore';
-import { getController, getRenderer } from './core/instances';
+import { useTrackStore } from './store/useTrackStore';
+import { getController, getEngine } from './core/instances';
+import { loadProject } from './core/projectIO';
+import { getSampleProjectFile } from './assets/sampleProject';
 import './App.css';
 
 function Header() {
-  const appMode = useProjectStore(s => s.appMode);
-  const exportProgress = useProjectStore(s => s.exportProgress);
-  const isExporting = appMode === 'exporting';
-
-  const handleExport = useCallback(async () => {
-    try {
-      await getRenderer().export();
-    } catch (err) {
-      console.error('Export failed:', err);
-    }
-  }, []);
-
-  const handleAbort = useCallback(() => {
-    try { getRenderer().abort(); } catch { /* not yet ready */ }
-  }, []);
-
-  // Global Space key for play/pause
+  // Global keyboard shortcuts
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.code === 'Space' && (e.target as HTMLElement).tagName !== 'INPUT') {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      // Space — play/pause
+      if (e.code === 'Space') {
         e.preventDefault();
         try {
           const ctrl = getController();
@@ -35,6 +26,47 @@ function Header() {
           if (mode === 'playing') ctrl.pause();
           else if (mode === 'idle') ctrl.play();
         } catch { /* not yet ready */ }
+        return;
+      }
+
+      // Ctrl+Z — remove last drawing vertex while drawing, otherwise global undo
+      if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        e.preventDefault();
+        if (useProjectStore.getState().appMode === 'drawing') {
+          try { getEngine().removeLastDrawingPoint(); } catch { /* not ready */ }
+        } else {
+          useTrackStore.getState().undo();
+        }
+        return;
+      }
+
+      // Ctrl+Shift+Z — redo
+      if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        useTrackStore.getState().redo();
+        return;
+      }
+
+      // Delete / Backspace — remove keyframe at or nearest to current time
+      if ((e.code === 'Delete' || e.code === 'Backspace') &&
+          useProjectStore.getState().appMode === 'idle') {
+        const { activeTrackId, tracks, removeKeyframe } = useTrackStore.getState();
+        if (!activeTrackId) return;
+        const track = tracks.find(t => t.id === activeTrackId);
+        if (!track || track.keyframes.length === 0) return;
+        const { currentTime } = useProjectStore.getState();
+        // Find keyframe whose time exactly matches (or is closest within 200 ms)
+        let closest = track.keyframes[0];
+        let minDist = Math.abs(closest.time - currentTime);
+        for (const kf of track.keyframes) {
+          const d = Math.abs(kf.time - currentTime);
+          if (d < minDist) { minDist = d; closest = kf; }
+        }
+        if (minDist <= 200) {
+          e.preventDefault();
+          removeKeyframe(activeTrackId, closest.id);
+        }
+        return;
       }
     }
     window.addEventListener('keydown', onKey);
@@ -47,36 +79,22 @@ function Header() {
       <span className="app-header__divider" />
       <span className="app-header__subtitle">Frontline Animation Studio</span>
       <div className="app-header__spacer" />
-      {isExporting ? (
-        <div className="app-header__export-status">
-          <div className="app-header__progress-bar">
-            <div
-              className="app-header__progress-fill"
-              style={{ width: `${exportProgress?.percent ?? 0}%` }}
-            />
-          </div>
-          <span className="app-header__progress-label">
-            {exportProgress?.message ?? 'Exporting…'}
-          </span>
-          <button className="app-header__btn app-header__btn--danger" onClick={handleAbort}>
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <button
-          className="app-header__btn app-header__btn--primary"
-          onClick={handleExport}
-          disabled={appMode !== 'idle'}
-          title="Export animation as MP4"
-        >
-          Export MP4
-        </button>
-      )}
     </>
   );
 }
 
 export default function App() {
+  // Load sample project on first mount when project is empty
+  useEffect(() => {
+    const { tracks } = useTrackStore.getState();
+    const { mapImageUrl } = useProjectStore.getState();
+    if (tracks.length === 0 && !mapImageUrl) {
+      getSampleProjectFile()
+        .then(file => loadProject(file))
+        .catch(console.error);
+    }
+  }, []);
+
   return (
     <Layout
       header={<Header />}

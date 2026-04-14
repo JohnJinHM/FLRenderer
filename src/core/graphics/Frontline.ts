@@ -17,7 +17,7 @@ export class Frontline {
   }
 
   /** Render this frontline at a specific interpolated state. */
-  render(points: Point[], keyframe: Pick<Keyframe, 'color' | 'outlineWidth' | 'fillOpacity'>): void {
+  render(points: Point[], keyframe: Pick<Keyframe, 'color' | 'outlineWidth' | 'fillOpacity' | 'glowWidth'>): void {
     if (points.length < 2) return;
 
     this.scope.activate();
@@ -50,7 +50,7 @@ export class Frontline {
     stroke.strokeJoin = 'round';
     // Glow via shadow
     stroke.shadowColor = new this.scope.Color(r, g, b, 0.7);
-    stroke.shadowBlur = keyframe.outlineWidth * 5;
+    stroke.shadowBlur = keyframe.glowWidth;
     stroke.shadowOffset = new this.scope.Point(0, 0);
     this.strokePath = stroke;
   }

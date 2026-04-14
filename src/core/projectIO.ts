@@ -5,7 +5,7 @@
  *
  *  {
  *    "version": 1,
- *    "project": { resolution, duration, fps, mapImageDataUrl },
+ *    "project": { resolution, duration, fps, mapImageDataUrl, viewState },
  *    "tracks": [ ...Track objects with full Keyframe data... ]
  *  }
  *
@@ -18,8 +18,9 @@
 import { useProjectStore } from '../store/useProjectStore';
 import { useTrackStore }   from '../store/useTrackStore';
 import { downloadBlob, fileToDataURL } from '../utils/fileUtils';
-import { getController } from './instances';
+import { getController, getEngine } from './instances';
 import type { Track } from '../types';
+import type { ViewState } from './graphics/PaperEngine';
 
 // ── File schema ────────────────────────────────────────────────────────────
 
@@ -30,6 +31,7 @@ interface ProjectFile {
     duration: number;
     fps: number;
     mapImageDataUrl: string | null;
+    viewState: ViewState | null;
   };
   tracks: Track[];
 }
@@ -64,9 +66,12 @@ export async function saveProject(): Promise<void> {
     ? await objectUrlToDataUrl(mapImageUrl)
     : null;
 
+  let viewState: ViewState | null = null;
+  try { viewState = getEngine().getViewState(); } catch { /* engine not ready */ }
+
   const file: ProjectFile = {
     version: 1,
-    project: { resolution, duration, fps, mapImageDataUrl },
+    project: { resolution, duration, fps, mapImageDataUrl, viewState },
     tracks,
   };
 
@@ -122,4 +127,9 @@ export async function loadProject(file: File): Promise<void> {
 
   // loadAll resets activeTrackId and colorIndex, then sets the track array.
   useTrackStore.getState().loadAll(data.tracks);
+
+  // ── Restore view state (zoom/pan) ──────────────────────────────────────
+  if (data.project.viewState) {
+    try { getEngine().setViewState(data.project.viewState); } catch { /* engine not yet ready */ }
+  }
 }

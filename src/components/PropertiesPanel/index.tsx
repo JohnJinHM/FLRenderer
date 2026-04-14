@@ -97,6 +97,12 @@ export function PropertiesPanel() {
     try { getEngine().refresh(); } catch { /* engine not ready */ }
   }
 
+  function handleGlowChange(value: number) {
+    if (!activeTrackId || !activeKeyframe) return;
+    updateKeyframe(activeTrackId, activeKeyframe.id, { glowWidth: value });
+    try { getEngine().refresh(); } catch { /* engine not ready */ }
+  }
+
   function handleInterpolationChange(interpolation: Interpolation) {
     if (!activeTrackId || !activeKeyframe) return;
     updateKeyframe(activeTrackId, activeKeyframe.id, { interpolation });
@@ -229,6 +235,21 @@ export function PropertiesPanel() {
             />
             <span className="properties-panel__field-value">
               {activeKeyframe.outlineWidth}px
+            </span>
+          </label>
+
+          <label className="properties-panel__field">
+            <span>Glow</span>
+            <input
+              type="range"
+              min={0}
+              max={30}
+              step={1}
+              value={activeKeyframe.glowWidth ?? 8}
+              onChange={e => handleGlowChange(Number(e.target.value))}
+            />
+            <span className="properties-panel__field-value">
+              {activeKeyframe.glowWidth ?? 8}
             </span>
           </label>
 

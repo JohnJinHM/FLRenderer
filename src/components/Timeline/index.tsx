@@ -48,6 +48,8 @@ interface KfDrag {
   startX: number;
   startTime: number;
   moved: boolean;
+  isAlt: boolean;
+  duplicated: boolean;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -65,10 +67,9 @@ export function Timeline() {
   const tracks = useTrackStore(s => s.tracks);
   const activeTrackId = useTrackStore(s => s.activeTrackId);
   const recordingTrackIds = useTrackStore(s => s.recordingTrackIds);
-  const { setActiveTrack, removeKeyframe, moveKeyframe, toggleRecording } = useTrackStore();
+  const { setActiveTrack, removeKeyframe, moveKeyframe, addKeyframe, toggleRecording } = useTrackStore();
 
   const isPlaying = appMode === 'playing';
-  const isExporting = appMode === 'exporting';
 
   // ── Zoom / pan state ───────────────────────────────────────────────────
   // visibleMs = how many milliseconds fit in the rail width
@@ -80,13 +81,15 @@ export function Timeline() {
 
   // Refs give event handlers stable, always-current values without
   // requiring them to be re-registered on every state change.
-  const visibleMsRef = useRef(visibleMs);
-  const viewStartRef = useRef(viewStart);
-  const durationRef  = useRef(duration);
+  const visibleMsRef  = useRef(visibleMs);
+  const viewStartRef  = useRef(viewStart);
+  const durationRef   = useRef(duration);
+  const currentTimeRef = useRef(currentTime);
 
-  useEffect(() => { visibleMsRef.current = visibleMs; }, [visibleMs]);
-  useEffect(() => { viewStartRef.current = viewStart; }, [viewStart]);
-  useEffect(() => { durationRef.current  = duration;  }, [duration]);
+  useEffect(() => { visibleMsRef.current  = visibleMs;   }, [visibleMs]);
+  useEffect(() => { viewStartRef.current  = viewStart;   }, [viewStart]);
+  useEffect(() => { durationRef.current   = duration;    }, [duration]);
+  useEffect(() => { currentTimeRef.current = currentTime; }, [currentTime]);
 
   // When total duration changes, clamp the current view so nothing goes out of bounds.
   useEffect(() => {
@@ -175,8 +178,36 @@ export function Timeline() {
         if (dx > 3) kfDrag.current.moved = true;
 
         if (kfDrag.current.moved) {
-          const t = clamp(pixelToTime(e.clientX), 0, durationRef.current);
-          moveKeyframe(kfDrag.current.trackId, kfDrag.current.keyframeId, t);
+          let t = clamp(pixelToTime(e.clientX), 0, durationRef.current);
+
+          // Snap to playhead when within 8 screen pixels
+          const rail = railRef.current;
+          if (rail) {
+            const snapThreshMs = (8 / rail.clientWidth) * visibleMsRef.current;
+            if (Math.abs(t - currentTimeRef.current) < snapThreshMs) {
+              t = currentTimeRef.current;
+            }
+          }
+
+          // Alt+drag: duplicate the keyframe once on first move, then drag the copy
+          if (kfDrag.current.isAlt && !kfDrag.current.duplicated) {
+            const store = useTrackStore.getState();
+            const track = store.tracks.find(tr => tr.id === kfDrag.current!.trackId);
+            const srcKf = track?.keyframes.find(kf => kf.id === kfDrag.current!.keyframeId);
+            if (srcKf) {
+              const newKf = store.addKeyframe(
+                kfDrag.current.trackId,
+                t,
+                srcKf.points.map(p => ({ ...p })),
+                { color: srcKf.color, outlineWidth: srcKf.outlineWidth, fillOpacity: srcKf.fillOpacity, glowWidth: srcKf.glowWidth, interpolation: srcKf.interpolation },
+              );
+              kfDrag.current.keyframeId = newKf.id;
+              kfDrag.current.startTime  = t;
+              kfDrag.current.duplicated = true;
+            }
+          } else {
+            moveKeyframe(kfDrag.current.trackId, kfDrag.current.keyframeId, t);
+          }
         }
         return;
       }
@@ -188,8 +219,10 @@ export function Timeline() {
         const drag = kfDrag.current;
         kfDrag.current = null;
         if (!drag.moved) {
+          // Seek to keyframe time and select its track
           try { getController().seekTo(drag.startTime); }
           catch { setCurrentTime(drag.startTime); }
+          setActiveTrack(drag.trackId);
         }
       }
       isDragging.current = false;
@@ -201,7 +234,7 @@ export function Timeline() {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [seekToPixel, pixelToTime, moveKeyframe, setCurrentTime]);
+  }, [seekToPixel, pixelToTime, moveKeyframe, addKeyframe, setCurrentTime, setActiveTrack]);
 
   // ── Transport ──────────────────────────────────────────────────────────
   function handlePlay() {
@@ -224,6 +257,29 @@ export function Timeline() {
     applyView(viewStartRef.current, visibleMsRef.current * factor);
   }
 
+  /** Collect all unique keyframe times across every track, sorted ascending. */
+  function allKeyframeTimes(): number[] {
+    const set = new Set<number>();
+    for (const track of tracks) {
+      for (const kf of track.keyframes) set.add(kf.time);
+    }
+    return [...set].sort((a, b) => a - b);
+  }
+
+  function jumpPrev() {
+    const times = allKeyframeTimes().filter(t => t < currentTime);
+    if (times.length === 0) return;
+    const t = times[times.length - 1];
+    try { getController().seekTo(t); } catch { setCurrentTime(t); }
+  }
+
+  function jumpNext() {
+    const times = allKeyframeTimes().filter(t => t > currentTime);
+    if (times.length === 0) return;
+    const t = times[0];
+    try { getController().seekTo(t); } catch { setCurrentTime(t); }
+  }
+
   // ── Derived display values ─────────────────────────────────────────────
   const viewEnd = viewStart + visibleMs;
   const playheadLeft = `${((currentTime - viewStart) / visibleMs) * 100}%`;
@@ -235,7 +291,6 @@ export function Timeline() {
         <button
           className={`timeline__btn ${isPlaying ? 'timeline__btn--active' : ''}`}
           onClick={handlePlay}
-          disabled={isExporting}
           title={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? '⏸' : '▶'}
@@ -244,10 +299,27 @@ export function Timeline() {
         <button
           className="timeline__btn"
           onClick={handleStop}
-          disabled={isExporting}
           title="Stop / Return to start"
         >
           ⏹
+        </button>
+
+        <button
+          className="timeline__btn"
+          onClick={jumpPrev}
+          disabled={!allKeyframeTimes().some(t => t < currentTime)}
+          title="Jump to previous keyframe"
+        >
+          ⏮
+        </button>
+
+        <button
+          className="timeline__btn"
+          onClick={jumpNext}
+          disabled={!allKeyframeTimes().some(t => t > currentTime)}
+          title="Jump to next keyframe"
+        >
+          ⏭
         </button>
 
         <span className="timeline__time">{formatTime(currentTime)}</span>
@@ -262,7 +334,7 @@ export function Timeline() {
             step={1}
             value={duration / 1000}
             onChange={handleDurationChange}
-            disabled={isPlaying || isExporting}
+            disabled={isPlaying}
           />
           s
         </label>
@@ -343,22 +415,20 @@ export function Timeline() {
                         startX: e.clientX,
                         startTime: kf.time,
                         moved: false,
+                        isAlt: e.altKey,
+                        duplicated: false,
                       };
                     }}
-                    title={`${formatTime(kf.time)} · ${kf.points.length} pts\nDrag to move · click to seek`}
+                    onDoubleClick={e => {
+                      e.stopPropagation();
+                      removeKeyframe(track.id, kf.id);
+                    }}
+                    title={`${formatTime(kf.time)} · ${kf.points.length} pts\nDrag to move · Alt+drag to duplicate · double-click to delete`}
                   >
                     <div
                       className={`timeline__keyframe ${isDraggingThis ? 'dragging' : ''}`}
                       style={{ background: kf.color }}
                     />
-                    <button
-                      className="timeline__kf-delete"
-                      onMouseDown={e => e.stopPropagation()}
-                      onClick={e => { e.stopPropagation(); removeKeyframe(track.id, kf.id); }}
-                      title="Delete keyframe"
-                    >
-                      ✕
-                    </button>
                   </div>
                 );
               })}

@@ -19,10 +19,15 @@
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 40px rgba(0, 0, 0, 0.6);
 }
 
-.canvas-view__reset-view {
+.canvas-view__overlay {
   position: absolute;
   top: 10px;
   right: 10px;
+  display: flex;
+  gap: 5px;
+}
+
+.canvas-view__overlay-btn {
   background: rgba(30, 33, 42, 0.85);
   color: rgba(255, 255, 255, 0.75);
   font-size: 11px;
@@ -32,11 +37,27 @@
   cursor: pointer;
   backdrop-filter: blur(4px);
   transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
 }
 
-.canvas-view__reset-view:hover {
+.canvas-view__overlay-btn:hover:not(:disabled) {
   background: rgba(60, 65, 80, 0.9);
   color: #fff;
+}
+
+.canvas-view__overlay-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.canvas-view__overlay-btn--primary {
+  background: rgba(74, 124, 89, 0.8);
+  border-color: rgba(74, 124, 89, 0.5);
+  color: #fff;
+}
+
+.canvas-view__overlay-btn--primary:hover:not(:disabled) {
+  background: rgba(90, 143, 105, 0.9);
 }
 
 .canvas-view__hint {

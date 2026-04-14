@@ -12,6 +12,7 @@ export interface Keyframe {
   color: string;          // Hex color string
   outlineWidth: number;
   fillOpacity: number;    // 0..1 for territory fill
+  glowWidth: number;      // Shadow blur radius for glow effect (0..30)
   interpolation: Interpolation;  // Easing applied leaving this keyframe
 }
 
@@ -24,10 +25,4 @@ export interface Track {
 
 export type DrawingMode = 'select' | 'draw';
 
-export type AppMode = 'idle' | 'drawing' | 'playing' | 'exporting';
-
-export interface ExportProgress {
-  phase: 'capturing' | 'encoding' | 'done' | 'error';
-  percent: number;
-  message: string;
-}
+export type AppMode = 'idle' | 'drawing' | 'playing';

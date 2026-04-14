@@ -3,8 +3,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { useTrackStore } from '../../store/useTrackStore';
 import { PaperEngine } from '../../core/graphics/PaperEngine';
 import { GsapController } from '../../core/animation/GsapController';
-import { VideoRenderer } from '../../core/exporter/VideoRenderer';
-import { setInstances, getEngine } from '../../core/instances';
+import { setInstances, getEngine, getController } from '../../core/instances';
 import './CanvasView.css';
 
 export function CanvasView() {
@@ -19,6 +18,9 @@ export function CanvasView() {
   const { addKeyframe, setActiveTrack } = useTrackStore();
   const { setDrawingTrackId, setAppMode } = useProjectStore();
 
+  const past   = useTrackStore(s => s.past);
+  const future = useTrackStore(s => s.future);
+
   // ── Bootstrap engine once ──────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -26,8 +28,7 @@ export function CanvasView() {
 
     const engine = new PaperEngine(canvas);
     const controller = new GsapController(engine);
-    const renderer = new VideoRenderer(engine, controller);
-    setInstances(engine, controller, renderer);
+    setInstances(engine, controller, {} as never);
     engineRef.current = engine;
 
     return () => {
@@ -70,6 +71,24 @@ export function CanvasView() {
     try { getEngine().resetView(); } catch { /* engine not ready */ }
   }, []);
 
+  const handleUndo = useCallback(() => {
+    useTrackStore.getState().undo();
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    useTrackStore.getState().redo();
+  }, []);
+
+  const handlePreview = useCallback(async () => {
+    const container = containerRef.current;
+    if (!container) return;
+    try {
+      await container.requestFullscreen();
+      getController().seekTo(0);
+      getController().play();
+    } catch { /* fullscreen denied or not supported */ }
+  }, []);
+
   return (
     <div ref={containerRef} className="canvas-view">
       <canvas
@@ -78,13 +97,38 @@ export function CanvasView() {
         height={resolution.h}
         className="canvas-view__canvas"
       />
-      <button
-        className="canvas-view__reset-view"
-        onClick={handleResetView}
-        title="Reset pan and zoom"
-      >
-        Reset View
-      </button>
+      <div className="canvas-view__overlay">
+        <button
+          className="canvas-view__overlay-btn"
+          onClick={handleUndo}
+          disabled={past.length === 0}
+          title="Undo (Ctrl+Z)"
+        >
+          ↩ Undo
+        </button>
+        <button
+          className="canvas-view__overlay-btn"
+          onClick={handleRedo}
+          disabled={future.length === 0}
+          title="Redo (Ctrl+Shift+Z)"
+        >
+          ↪ Redo
+        </button>
+        <button
+          className="canvas-view__overlay-btn"
+          onClick={handleResetView}
+          title="Reset pan and zoom"
+        >
+          Reset View
+        </button>
+        <button
+          className="canvas-view__overlay-btn canvas-view__overlay-btn--primary"
+          onClick={handlePreview}
+          title="Preview animation fullscreen"
+        >
+          ▶ Preview
+        </button>
+      </div>
       {appMode === 'drawing' && (
         <div className="canvas-view__hint">
           Click to place vertices &nbsp;·&nbsp; Enter to finish &nbsp;·&nbsp; Esc to cancel

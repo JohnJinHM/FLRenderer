@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { AppMode, ExportProgress } from '../types';
+import type { AppMode } from '../types';
 
 interface ProjectState {
   mapImageUrl: string | null;
@@ -9,7 +9,6 @@ interface ProjectState {
   currentTime: number;    // Playhead position in ms
   fps: number;
   appMode: AppMode;
-  exportProgress: ExportProgress | null;
   drawingTrackId: string | null; // Which track is currently being drawn
 
   setMapImage: (file: File) => void;
@@ -19,7 +18,6 @@ interface ProjectState {
   setFps: (fps: number) => void;
   setAppMode: (mode: AppMode) => void;
   setDrawingTrackId: (id: string | null) => void;
-  setExportProgress: (progress: ExportProgress | null) => void;
 
   /** Replace the entire project state from a loaded save file. */
   restoreState: (saved: {
@@ -38,7 +36,6 @@ export const useProjectStore = create<ProjectState>()(
     currentTime: 0,
     fps: 60,
     appMode: 'idle',
-    exportProgress: null,
     drawingTrackId: null,
 
     setMapImage: (file: File) => {
@@ -61,7 +58,6 @@ export const useProjectStore = create<ProjectState>()(
     setFps: (fps) => set({ fps }),
     setAppMode: (appMode) => set({ appMode }),
     setDrawingTrackId: (drawingTrackId) => set({ drawingTrackId }),
-    setExportProgress: (exportProgress) => set({ exportProgress }),
 
     restoreState: (saved) => {
       // Revoke the previous Object URL before replacing it
@@ -75,7 +71,6 @@ export const useProjectStore = create<ProjectState>()(
         currentTime:   0,
         appMode:       'idle',
         drawingTrackId: null,
-        exportProgress: null,
       });
     },
   })),

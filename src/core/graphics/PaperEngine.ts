@@ -14,6 +14,12 @@ interface EditKeyframeSnapshot {
   color: string;
   outlineWidth: number;
   fillOpacity: number;
+  glowWidth: number;
+}
+
+export interface ViewState {
+  zoom: number;
+  center: { x: number; y: number };
 }
 
 export class PaperEngine {
@@ -41,6 +47,11 @@ export class PaperEngine {
   private editKeyframe: EditKeyframeSnapshot | null = null;
   private dragDotIndex = -1;
 
+  // The view center established by Paper.js at setup time (CSS-pixel project
+  // coords, before any pan or zoom). Used to anchor the map raster and to
+  // restore the default view position.
+  private naturalViewCenter!: paper.Point;
+
   // Pan state
   private isPanning = false;
   private panLastClient = { x: 0, y: 0 };
@@ -66,6 +77,7 @@ export class PaperEngine {
     const newCenter = view.viewToProject(new paper.Point(e.offsetX, e.offsetY));
     view.center = view.center.add(oldCenter.subtract(newCenter));
     view.update();
+    this._rebuildZoomDependentVisuals();
   };
 
   private readonly _onPanMouseDown = (e: MouseEvent) => {
@@ -101,7 +113,7 @@ export class PaperEngine {
     if (e.button === 1) e.preventDefault();
   };
 
-  // Double-click: delete vertex (on dot) or insert vertex (on line segment)
+  // Double-click: insert vertex on segment only (deletion removed)
   private readonly _onDblClick = (e: MouseEvent) => {
     if (this.isDrawing) return;
     if (!this.editKeyframe) return;
@@ -112,16 +124,11 @@ export class PaperEngine {
     this.scope.activate();
     const pt = this.scope.view.viewToProject(new paper.Point(e.offsetX, e.offsetY));
 
-    // ── Delete vertex ────────────────────────────────────────────────────
-    const dotIdx = this.findDotIndex(pt);
-    if (dotIdx !== -1) {
-      if (this.editKeyframe.points.length <= 2) return; // need at least 2
-      this.editKeyframe.points.splice(dotIdx, 1);
-      this._commitEditPoints();
-      return;
-    }
-
     // ── Insert vertex on nearest segment ─────────────────────────────────
+    // Skip if cursor is over an existing dot (avoid accidental inserts)
+    const dotIdx = this.findDotIndex(pt);
+    if (dotIdx !== -1) return;
+
     const seg = this.findNearestSegment(pt);
     if (seg !== null) {
       this.editKeyframe.points.splice(seg.insertAt, 0, { x: pt.x, y: pt.y });
@@ -133,6 +140,8 @@ export class PaperEngine {
     this.canvas = canvas;
     this.scope = new paper.PaperScope();
     this.scope.setup(canvas);
+    // Capture the CSS-pixel-based project center before any pan/zoom.
+    this.naturalViewCenter = this.scope.view.center.clone();
     this.initLayers();
     this.initTool();
     this.initPanZoom();
@@ -199,7 +208,7 @@ export class PaperEngine {
         return;
       }
       if (this.findDotIndex(e.point) !== -1) {
-        // Over an existing vertex — grab to move, double-click to delete
+        // Over an existing vertex — grab to move
         this.canvas.style.cursor = 'grab';
       } else if (this.findNearestSegment(e.point) !== null) {
         // Over a line segment — double-click to insert a vertex
@@ -212,6 +221,9 @@ export class PaperEngine {
     tool.onKeyDown = (e: paper.KeyEvent) => {
       if (e.key === 'escape' && this.isDrawing) {
         this.cancelDrawing();
+        // Sync store so React knows drawing ended (safe — this is a user event, not a subscription)
+        useProjectStore.getState().setDrawingTrackId(null);
+        useProjectStore.getState().setAppMode('idle');
       }
       if (e.key === 'enter' && this.isDrawing) {
         this.finishDrawing();
@@ -285,17 +297,40 @@ export class PaperEngine {
     const raster = new paper.Raster(url);
     raster.onLoad = () => {
       this.scope.activate();
-      const vSize = this.scope.view.size;
-      // Fit raster to canvas while preserving aspect ratio
+      // Use viewSize (CSS pixels, zoom-invariant) so the raster is always
+      // scaled to the initial project space regardless of when onLoad fires
+      // relative to setViewState. view.size would return the shrunken
+      // project-unit viewport at zoom > 1, making the raster too small.
+      const vSize = this.scope.view.viewSize;
       const scale = Math.min(
         vSize.width / raster.width,
         vSize.height / raster.height,
       );
       raster.scale(scale);
-      raster.position = this.scope.view.center;
+      raster.position = this.naturalViewCenter.clone();
       this.scope.view.update();
     };
     this.mapRaster = raster;
+  }
+
+  // ─── View state ──────────────────────────────────────────────────────────
+
+  getViewState(): ViewState {
+    this.scope.activate();
+    const view = this.scope.view;
+    return {
+      zoom: view.zoom,
+      center: { x: view.center.x, y: view.center.y },
+    };
+  }
+
+  setViewState(state: ViewState): void {
+    this.scope.activate();
+    const view = this.scope.view;
+    view.zoom = state.zoom;
+    view.center = new paper.Point(state.center.x, state.center.y);
+    view.update();
+    this._rebuildZoomDependentVisuals();
   }
 
   // ─── Track sync ──────────────────────────────────────────────────────────
@@ -370,7 +405,7 @@ export class PaperEngine {
     if (!bracket) return;
 
     let points: Point[];
-    let style: Pick<Keyframe, 'color' | 'outlineWidth' | 'fillOpacity'>;
+    let style: Pick<Keyframe, 'color' | 'outlineWidth' | 'fillOpacity' | 'glowWidth'>;
 
     if (!bracket.kf2) {
       points = bracket.kf1.points;
@@ -383,6 +418,7 @@ export class PaperEngine {
         color:        lerpColor(bracket.kf1.color, bracket.kf2.color, et),
         outlineWidth: lerp(bracket.kf1.outlineWidth, bracket.kf2.outlineWidth, et),
         fillOpacity:  lerp(bracket.kf1.fillOpacity,  bracket.kf2.fillOpacity,  et),
+        glowWidth:    lerp(bracket.kf1.glowWidth ?? 8, bracket.kf2.glowWidth ?? 8, et),
       };
     }
 
@@ -395,7 +431,7 @@ export class PaperEngine {
   refreshEditDots(): void {
     const { appMode } = useProjectStore.getState();
 
-    // Don't show edit dots while drawing or playing/exporting
+    // Don't show edit dots while drawing or playing
     if (appMode !== 'idle') {
       this.clearEditDots();
       return;
@@ -437,6 +473,7 @@ export class PaperEngine {
       color: kf.color,
       outlineWidth: kf.outlineWidth,
       fillOpacity: kf.fillOpacity,
+      glowWidth: kf.glowWidth ?? 8,
     };
 
     this.buildEditDots(this.editKeyframe.points, kf.color);
@@ -451,11 +488,14 @@ export class PaperEngine {
 
     this.editLayer.activate();
 
+    // Use screen-pixel-constant radius: 6px regardless of zoom level
+    const radius = 6 / this.scope.view.zoom;
+
     for (const p of points) {
-      const dot = new paper.Shape.Circle(new paper.Point(p.x, p.y), 6);
+      const dot = new paper.Shape.Circle(new paper.Point(p.x, p.y), radius);
       dot.fillColor = new paper.Color(color);
       dot.strokeColor = new paper.Color(1, 1, 1, 0.9);
-      dot.strokeWidth = 1.5;
+      dot.strokeWidth = 1.5 / this.scope.view.zoom;
       this.editDots.push(dot);
     }
 
@@ -552,7 +592,7 @@ export class PaperEngine {
   /** Saves the dragged points back to the track store. */
   private commitDotMove(): void {
     if (!this.editKeyframe) return;
-    const { trackId, keyframeId, points, color, outlineWidth, fillOpacity } = this.editKeyframe;
+    const { trackId, keyframeId, points, color, outlineWidth, fillOpacity, glowWidth } = this.editKeyframe;
     const { currentTime } = useProjectStore.getState();
     const store = useTrackStore.getState();
     const isRecording = store.recordingTrackIds.includes(trackId);
@@ -567,7 +607,7 @@ export class PaperEngine {
         // Create a new keyframe at the playhead, carrying the dragged points
         // and the style of the nearest keyframe we were editing.
         store.addKeyframe(trackId, currentTime, points.map(p => ({ ...p })), {
-          color, outlineWidth, fillOpacity,
+          color, outlineWidth, fillOpacity, glowWidth,
         });
       }
     } else {
@@ -591,6 +631,16 @@ export class PaperEngine {
     this.drawingLayer.activate();
     this.activeTool.activate();
     this.canvas.style.cursor = 'crosshair';
+  }
+
+  /** Remove the most recently placed drawing vertex (Ctrl+Z during drawing). */
+  removeLastDrawingPoint(): void {
+    if (!this.isDrawing || this.drawingPoints.length === 0) return;
+    this.drawingPoints.pop();
+    this.scope.activate();
+    this.drawingLayer.removeChildren();
+    this.drawingCursorPath = null;
+    this.redrawPreview();
   }
 
   cancelDrawing(): void {
@@ -623,19 +673,22 @@ export class PaperEngine {
 
     if (this.drawingPoints.length < 1) return;
 
+    const zoom = this.scope.view.zoom;
+
     const path = new paper.Path();
     for (const p of this.drawingPoints) path.add(p);
     path.strokeColor = new paper.Color(1, 0.8, 0.2, 0.9);
-    path.strokeWidth = 2;
-    path.dashArray = [6, 4];
+    path.strokeWidth = 2 / zoom;
+    path.dashArray = [6 / zoom, 4 / zoom];
     path.fillColor = new paper.Color(1, 0.8, 0.2, 0.1);
 
     // Dot for each vertex — created once per redraw, all owned by drawingLayer
+    const dotRadius = 4 / zoom;
     for (const p of this.drawingPoints) {
-      const dot = new paper.Shape.Circle(p, 4);
+      const dot = new paper.Shape.Circle(p, dotRadius);
       dot.fillColor = new paper.Color(1, 0.8, 0.2, 1);
       dot.strokeColor = new paper.Color(0, 0, 0, 0.5);
-      dot.strokeWidth = 1;
+      dot.strokeWidth = 1 / zoom;
     }
 
     this.scope.view.update();
@@ -653,9 +706,10 @@ export class PaperEngine {
       const line = new paper.Path();
       line.add(this.drawingPoints[this.drawingPoints.length - 1]);
       line.add(point);
+      const zoom = this.scope.view.zoom;
       line.strokeColor = new paper.Color(1, 0.8, 0.2, 0.4);
-      line.strokeWidth = 1.5;
-      line.dashArray = [4, 4];
+      line.strokeWidth = 1.5 / zoom;
+      line.dashArray = [4 / zoom, 4 / zoom];
       this.drawingCursorPath = line;
     }
 
@@ -693,11 +747,18 @@ export class PaperEngine {
   resetView(): void {
     this.scope.activate();
     this.scope.view.zoom = 1;
-    this.scope.view.center = new paper.Point(
-      this.canvas.width / 2,
-      this.canvas.height / 2,
-    );
+    this.scope.view.center = this.naturalViewCenter.clone();
     this.scope.view.update();
+    this._rebuildZoomDependentVisuals();
+  }
+
+  /** Rebuild whichever zoom-dependent visuals are currently active. */
+  private _rebuildZoomDependentVisuals(): void {
+    if (this.editKeyframe) {
+      this.buildEditDots(this.editKeyframe.points, this.editKeyframe.color);
+    } else if (this.isDrawing) {
+      this.redrawPreview();
+    }
   }
 
   private _restoreCursor(): void {

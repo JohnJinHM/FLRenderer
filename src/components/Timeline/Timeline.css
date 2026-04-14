@@ -279,7 +279,7 @@
   overflow: hidden;
 }
 
-/* ─── Keyframe wrapper + diamond + delete ────────────────── */
+/* ─── Keyframe wrapper + diamond ─────────────────────────── */
 .timeline__kf-wrap {
   position: absolute;
   top: 50%;
@@ -318,36 +318,6 @@
   border-color: #fff;
 }
 
-.timeline__kf-delete {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(160, 28, 28, 0.92);
-  color: #fff;
-  font-size: 7px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  line-height: 1;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s;
-}
-
-.timeline__kf-wrap:hover .timeline__kf-delete {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.timeline__kf-delete:hover {
-  background: #e74c3c;
-}
 
 /* ─── Playhead ───────────────────────────────────────────── */
 .timeline__playhead {
